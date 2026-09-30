@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Program by RofWeb</title>
+    <title>Program Enkripsi & Dekripsi - RofWeb</title>
     <style>
         * {
             box-sizing: border-box;
@@ -75,6 +75,24 @@
             gap: 15px;
         }
 
+        .select-algo {
+            width: 100%;
+            background-color: #d1d5db;
+            color: #1f2937;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .select-algo:focus {
+            outline: 2px solid #ffffff;
+        }
+
         textarea {
             width: 100%;
             height: 130px;
@@ -121,14 +139,19 @@
         <img src="assets/logo.png" alt="Logo" class="logo-img"> RofWeb
     </div>
 
-    <h1><b>Program Enkripsi & Deskripsi berbasis ROT13</b></h1>
+    <h1><b>Program Enkripsi & Dekripsi</b></h1>
 
     <div class="container">
-        <div class="description">
+        <div class="description" id="algoDesc">
             <b>ROT13</b> (dari Bahasa Inggris rotate by 13, putar dengan 13 langkah), adalah algoritme enkripsi sederhana yang menggunakan sandi abjad-tunggal dengan pergeseran k=13 (huruf A diganti dengan N, huruf B diganti dengan O, dan seterusnya). Enkripsi ini merupakan penggunaan dari sandi Caesar dengan geseran 13.
         </div>
 
         <div class="interactive-box">
+            <select id="algoSelect" class="select-algo">
+                <option value="rot13">Metode: ROT13</option>
+                <option value="atbash">Metode: Atbash</option>
+            </select>
+
             <textarea id="inputText" placeholder="Masukkan teks asli ..."></textarea>
             
             <div class="button-group">
@@ -143,6 +166,11 @@
     <script>
         let isEncryptMode = true;
 
+        const descriptions = {
+            rot13: "<b>ROT13</b> (dari Bahasa Inggris rotate by 13, putar dengan 13 langkah), adalah algoritme enkripsi sederhana yang menggunakan sandi abjad-tunggal dengan pergeseran k=13 (huruf A diganti dengan N, huruf B diganti dengan O, dan seterusnya). Enkripsi ini merupakan penggunaan dari sandi Caesar dengan geseran 13.",
+            atbash: "<b>Atbash</b> adalah algoritme enkripsi substitusi monoalfabetik klasik di mana urutan abjad dibalik secara total (huruf A diganti Z, B diganti Y, dan seterusnya). Sama seperti ROT13, Atbash bersifat simetris sehingga fungsi enkripsi dan dekripsinya identik."
+        };
+
         function rot13Char(char) {
             if (char >= 'A' && char <= 'Z') {
                 return String.fromCharCode(((char.charCodeAt(0) - 65 + 13) % 26) + 65);
@@ -153,17 +181,42 @@
             return char;
         }
 
-        function rot13(text) {
+        function atbashChar(char) {
+            if (char >= 'A' && char <= 'Z') {
+                return String.fromCharCode(155 - char.charCodeAt(0));
+            }
+            if (char >= 'a' && char <= 'z') {
+                return String.fromCharCode(219 - char.charCodeAt(0));
+            }
+            return char;
+        }
+
+        function transformText(text, algo) {
             let hasil = '';
             for (let i = 0; i < text.length; i++) {
-                hasil += rot13Char(text[i]);
+                if (algo === 'atbash') {
+                    hasil += atbashChar(text[i]);
+                } else {
+                    hasil += rot13Char(text[i]);
+                }
             }
             return hasil;
         }
 
+        document.getElementById('algoSelect').addEventListener('change', function() {
+            const selectedAlgo = this.value;
+            document.getElementById('algoDesc').innerHTML = descriptions[selectedAlgo];
+            
+            let teksInput = document.getElementById('inputText').value;
+            if (teksInput) {
+                document.getElementById('outputText').value = transformText(teksInput, selectedAlgo);
+            }
+        });
+
         document.getElementById('btnProses').addEventListener('click', function() {
             let teksInput = document.getElementById('inputText').value;
-            let teksHasil = rot13(teksInput);
+            let selectedAlgo = document.getElementById('algoSelect').value;
+            let teksHasil = transformText(teksInput, selectedAlgo);
             document.getElementById('outputText').value = teksHasil;
         });
 
