@@ -75,7 +75,7 @@
             gap: 15px;
         }
 
-        .select-algo {
+        .select-algo, .input-shift {
             width: 100%;
             background-color: #d1d5db;
             color: #1f2937;
@@ -85,12 +85,16 @@
             font-weight: bold;
             font-family: inherit;
             font-size: 0.9rem;
-            cursor: pointer;
             outline: none;
         }
 
-        .select-algo:focus {
+        .select-algo:focus, .input-shift:focus {
             outline: 2px solid #ffffff;
+        }
+
+        .shift-box {
+            display: none;
+            width: 100%;
         }
 
         textarea {
@@ -150,7 +154,12 @@
             <select id="algoSelect" class="select-algo">
                 <option value="rot13">Metode: ROT13</option>
                 <option value="atbash">Metode: Atbash</option>
+                <option value="caesar">Metode: Caesar</option>
             </select>
+
+            <div id="shiftBox" class="shift-box">
+                <input type="number" id="shiftValue" class="input-shift" value="3" min="1" max="25" placeholder="Jumlah Geseran (k)">
+            </div>
 
             <textarea id="inputText" placeholder="Masukkan teks asli ..."></textarea>
             
@@ -168,7 +177,8 @@
 
         const descriptions = {
             rot13: "<b>ROT13</b> (dari Bahasa Inggris rotate by 13, putar dengan 13 langkah), adalah algoritme enkripsi sederhana yang menggunakan sandi abjad-tunggal dengan pergeseran k=13 (huruf A diganti dengan N, huruf B diganti dengan O, dan seterusnya). Enkripsi ini merupakan penggunaan dari sandi Caesar dengan geseran 13.",
-            atbash: "<b>Atbash</b> adalah algoritme enkripsi substitusi monoalfabetik klasik di mana urutan abjad dibalik secara total (huruf A diganti Z, B diganti Y, dan seterusnya). Sama seperti ROT13, Atbash bersifat simetris sehingga fungsi enkripsi dan dekripsinya identik."
+            atbash: "<b>Atbash</b> adalah algoritme enkripsi substitusi monoalfabetik klasik di mana urutan abjad dibalik secara total (huruf A diganti Z, B diganti Y, dan seterusnya). Sama seperti ROT13, Atbash bersifat simetris sehingga fungsi enkripsi dan dekripsinya identik.",
+            caesar: "<b>Sandi Caesar</b> adalah algoritme enkripsi substitusi klasik di mana setiap huruf pada teks asli digantikan oleh huruf lain yang memiliki selisih posisi tertentu (geseran k) dalam alfabet."
         };
 
         function rot13Char(char) {
@@ -191,11 +201,29 @@
             return char;
         }
 
-        function transformText(text, algo) {
+        function caesarChar(char, shift, isDecrypt) {
+            let k = parseInt(shift) || 0;
+            k = ((k % 26) + 26) % 26;
+            if (isDecrypt) {
+                k = (26 - k) % 26;
+            }
+
+            if (char >= 'A' && char <= 'Z') {
+                return String.fromCharCode(((char.charCodeAt(0) - 65 + k) % 26) + 65);
+            }
+            if (char >= 'a' && char <= 'z') {
+                return String.fromCharCode(((char.charCodeAt(0) - 97 + k) % 26) + 97);
+            }
+            return char;
+        }
+
+        function transformText(text, algo, shift, isDecrypt) {
             let hasil = '';
             for (let i = 0; i < text.length; i++) {
                 if (algo === 'atbash') {
                     hasil += atbashChar(text[i]);
+                } else if (algo === 'caesar') {
+                    hasil += caesarChar(text[i], shift, isDecrypt);
                 } else {
                     hasil += rot13Char(text[i]);
                 }
@@ -203,22 +231,32 @@
             return hasil;
         }
 
+        function prosesProspek() {
+            let teksInput = document.getElementById('inputText').value;
+            let selectedAlgo = document.getElementById('algoSelect').value;
+            let shiftVal = document.getElementById('shiftValue').value;
+            let isDecrypt = !isEncryptMode;
+            let teksHasil = transformText(teksInput, selectedAlgo, shiftVal, isDecrypt);
+            document.getElementById('outputText').value = teksHasil;
+        }
+
         document.getElementById('algoSelect').addEventListener('change', function() {
             const selectedAlgo = this.value;
             document.getElementById('algoDesc').innerHTML = descriptions[selectedAlgo];
             
-            let teksInput = document.getElementById('inputText').value;
-            if (teksInput) {
-                document.getElementById('outputText').value = transformText(teksInput, selectedAlgo);
+            const shiftBox = document.getElementById('shiftBox');
+            if (selectedAlgo === 'caesar') {
+                shiftBox.style.display = 'block';
+            } else {
+                shiftBox.style.display = 'none';
             }
+
+            prosesProspek();
         });
 
-        document.getElementById('btnProses').addEventListener('click', function() {
-            let teksInput = document.getElementById('inputText').value;
-            let selectedAlgo = document.getElementById('algoSelect').value;
-            let teksHasil = transformText(teksInput, selectedAlgo);
-            document.getElementById('outputText').value = teksHasil;
-        });
+        document.getElementById('shiftValue').addEventListener('input', prosesProspek);
+
+        document.getElementById('btnProses').addEventListener('click', prosesProspek);
 
         document.getElementById('btnTukar').addEventListener('click', function() {
             isEncryptMode = !isEncryptMode;
@@ -238,6 +276,8 @@
                 btnProses.innerText = "DEKRIPSI";
                 inputArea.placeholder = "Masukkan teks terenkripsi ...";
             }
+
+            prosesProspek();
         });
     </script>
 </body>
