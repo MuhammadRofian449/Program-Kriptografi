@@ -143,7 +143,7 @@
         <img src="assets/logo.png" alt="Logo" class="logo-img"> RofWeb
     </div>
 
-    <h1><b>Muhammad Rofian Noor | NIM : 2411084</b></h1>
+    <h1><b>Program Enkripsi & Dekripsi</b></h1>
 
     <div class="container">
         <div class="description" id="algoDesc">
@@ -155,10 +155,11 @@
                 <option value="rot13">Metode: ROT13</option>
                 <option value="atbash">Metode: Atbash</option>
                 <option value="caesar">Metode: Caesar</option>
+                <option value="transposisi">Metode: Transposisi Vertikal</option>
             </select>
 
             <div id="shiftBox" class="shift-box">
-                <input type="number" id="shiftValue" class="input-shift" value="3" min="1" max="25" placeholder="Jumlah Geseran (k)">
+                <input type="number" id="shiftValue" class="input-shift" value="6" min="1" max="50" placeholder="Kunci (k)">
             </div>
 
             <textarea id="inputText" placeholder="Masukkan teks asli ..."></textarea>
@@ -178,7 +179,8 @@
         const descriptions = {
             rot13: "<b>ROT13</b> (dari Bahasa Inggris rotate by 13, putar dengan 13 langkah), adalah algoritme enkripsi sederhana yang menggunakan sandi abjad-tunggal dengan pergeseran k=13 (huruf A diganti dengan N, huruf B diganti dengan O, dan seterusnya). Enkripsi ini merupakan penggunaan dari sandi Caesar dengan geseran 13.",
             atbash: "<b>Atbash</b> adalah algoritme enkripsi substitusi monoalfabetik klasik di mana urutan abjad dibalik secara total (huruf A diganti Z, B diganti Y, dan seterusnya). Sama seperti ROT13, Atbash bersifat simetris sehingga fungsi enkripsi dan dekripsinya identik.",
-            caesar: "<b>Sandi Caesar</b> adalah algoritme enkripsi substitusi klasik di mana setiap huruf pada teks asli digantikan oleh huruf lain yang memiliki selisih posisi tertentu (geseran k) dalam alfabet."
+            caesar: "<b>Sandi Caesar</b> adalah algoritme enkripsi substitusi klasik di mana setiap huruf pada teks asli digantikan oleh huruf lain yang memiliki selisih posisi tertentu (geseran k) dalam alfabet.",
+            transposisi: "<b>Transposisi Vertikal / Diagonal</b> adalah teknik kriptografi di mana posisi karakter diubah dengan cara menyusun teks ke dalam matriks berdasarkan jumlah kolom/kunci (k), kemudian membaca hasilnya secara vertikal (kolom demi kolom)."
         };
 
         function rot13Char(char) {
@@ -217,7 +219,70 @@
             return char;
         }
 
+        function transposisiEncrypt(text, key) {
+            let k = parseInt(key) || 1;
+            if (k < 1) k = 1;
+
+            let cleanText = text.replace(/\s+/g, '');
+            if (!cleanText) return '';
+
+            let result = '';
+            let numRows = Math.ceil(cleanText.length / k);
+
+            for (let col = 0; col < k; col++) {
+                for (let row = 0; row < numRows; row++) {
+                    let index = row * k + col;
+                    if (index < cleanText.length) {
+                        result += cleanText[index];
+                    }
+                }
+            }
+            return result;
+        }
+
+        function transposisiDecrypt(text, key) {
+            let k = parseInt(key) || 1;
+            if (k < 1) k = 1;
+
+            let cleanText = text.replace(/\s+/g, '');
+            if (!cleanText) return '';
+
+            let len = cleanText.length;
+            let numRows = Math.ceil(len / k);
+            let fullCols = len % k;
+            if (fullCols === 0) fullCols = k;
+
+            let grid = Array.from({ length: numRows }, () => Array(k).fill(''));
+
+            let charIdx = 0;
+            for (let col = 0; col < k; col++) {
+                let rowsInCol = numRows;
+                if (fullCols > 0 && col >= fullCols && (len % k !== 0)) {
+                    rowsInCol = numRows - 1;
+                }
+                for (let row = 0; row < rowsInCol; row++) {
+                    if (charIdx < len) {
+                        grid[row][col] = cleanText[charIdx++];
+                    }
+                }
+            }
+
+            let result = '';
+            for (let row = 0; row < numRows; row++) {
+                for (let col = 0; col < k; col++) {
+                    if (grid[row][col]) {
+                        result += grid[row][col];
+                    }
+                }
+            }
+            return result;
+        }
+
         function transformText(text, algo, shift, isDecrypt) {
+            if (algo === 'transposisi') {
+                return isDecrypt ? transposisiDecrypt(text, shift) : transposisiEncrypt(text, shift);
+            }
+
             let hasil = '';
             for (let i = 0; i < text.length; i++) {
                 if (algo === 'atbash') {
@@ -245,8 +310,14 @@
             document.getElementById('algoDesc').innerHTML = descriptions[selectedAlgo];
             
             const shiftBox = document.getElementById('shiftBox');
+            const shiftInput = document.getElementById('shiftValue');
+
             if (selectedAlgo === 'caesar') {
                 shiftBox.style.display = 'block';
+                shiftInput.placeholder = 'Jumlah Geseran (k)';
+            } else if (selectedAlgo === 'transposisi') {
+                shiftBox.style.display = 'block';
+                shiftInput.placeholder = 'Jumlah Kolom/Kunci (k)';
             } else {
                 shiftBox.style.display = 'none';
             }
