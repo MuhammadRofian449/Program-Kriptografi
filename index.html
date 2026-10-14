@@ -156,10 +156,11 @@
                 <option value="atbash">Metode: Atbash</option>
                 <option value="caesar">Metode: Caesar</option>
                 <option value="transposisi">Metode: Transposisi Vertikal</option>
+                <option value="vigenere">Metode: Vigenère (Polyalfabetik)</option>
             </select>
 
             <div id="shiftBox" class="shift-box">
-                <input type="number" id="shiftValue" class="input-shift" value="6" min="1" max="50" placeholder="Kunci (k)">
+                <input type="text" id="shiftValue" class="input-shift" value="6" placeholder="Kunci (k)">
             </div>
 
             <textarea id="inputText" placeholder="Masukkan teks asli ..."></textarea>
@@ -180,7 +181,8 @@
             rot13: "<b>ROT13</b> (dari Bahasa Inggris rotate by 13, putar dengan 13 langkah), adalah algoritme enkripsi sederhana yang menggunakan sandi abjad-tunggal dengan pergeseran k=13 (huruf A diganti dengan N, huruf B diganti dengan O, dan seterusnya). Enkripsi ini merupakan penggunaan dari sandi Caesar dengan geseran 13.",
             atbash: "<b>Atbash</b> adalah algoritme enkripsi substitusi monoalfabetik klasik di mana urutan abjad dibalik secara total (huruf A diganti Z, B diganti Y, dan seterusnya). Sama seperti ROT13, Atbash bersifat simetris sehingga fungsi enkripsi dan dekripsinya identik.",
             caesar: "<b>Sandi Caesar</b> adalah algoritme enkripsi substitusi klasik di mana setiap huruf pada teks asli digantikan oleh huruf lain yang memiliki selisih posisi tertentu (geseran k) dalam alfabet.",
-            transposisi: "<b>Transposisi Vertikal / Diagonal</b> adalah teknik kriptografi di mana posisi karakter diubah dengan cara menyusun teks ke dalam matriks berdasarkan jumlah kolom/kunci (k), kemudian membaca hasilnya secara vertikal (kolom demi kolom)."
+            transposisi: "<b>Transposisi Vertikal / Diagonal</b> adalah teknik kriptografi di mana posisi karakter diubah dengan cara menyusun teks ke dalam matriks berdasarkan jumlah kolom/kunci (k), kemudian membaca hasilnya secara vertikal (kolom demi kolom).",
+            vigenere: "<b>Sandi Vigenère</b> adalah metode substitusi polialfabetik yang menggunakan kata kunci berbentuk teks. Setiap huruf teks asli digester sejauh nilai huruf kata kunci yang bersesuaian, sehingga huruf yang sama bisa berubah menjadi huruf berbeda."
         };
 
         function rot13Char(char) {
@@ -219,6 +221,35 @@
             return char;
         }
 
+        function runVigenere(text, key, isDecrypt) {
+            if (!key) return text;
+            let cleanKey = key.replace(/[^a-zA-Z]/g, '');
+            if (!cleanKey) return text;
+
+            let result = '';
+            let keyIdx = 0;
+
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                if (c >= 'A' && c <= 'Z') {
+                    let p = c.charCodeAt(0) - 65;
+                    let k = cleanKey[keyIdx % cleanKey.length].toUpperCase().charCodeAt(0) - 65;
+                    let shift = isDecrypt ? (p - k + 26) % 26 : (p + k) % 26;
+                    result += String.fromCharCode(shift + 65);
+                    keyIdx++;
+                } else if (c >= 'a' && c <= 'z') {
+                    let p = c.charCodeAt(0) - 97;
+                    let k = cleanKey[keyIdx % cleanKey.length].toLowerCase().charCodeAt(0) - 97;
+                    let shift = isDecrypt ? (p - k + 26) % 26 : (p + k) % 26;
+                    result += String.fromCharCode(shift + 97);
+                    keyIdx++;
+                } else {
+                    result += c;
+                }
+            }
+            return result;
+        }
+
         function transposisiEncrypt(text, key) {
             let k = parseInt(key) || 1;
             if (k < 1) k = 1;
@@ -250,16 +281,12 @@
             let len = cleanText.length;
             let numRows = Math.ceil(len / k);
             let fullCols = len % k;
-            if (fullCols === 0) fullCols = k;
 
             let grid = Array.from({ length: numRows }, () => Array(k).fill(''));
 
             let charIdx = 0;
             for (let col = 0; col < k; col++) {
-                let rowsInCol = numRows;
-                if (fullCols > 0 && col >= fullCols && (len % k !== 0)) {
-                    rowsInCol = numRows - 1;
-                }
+                let rowsInCol = (fullCols === 0 || col < fullCols) ? numRows : numRows - 1;
                 for (let row = 0; row < rowsInCol; row++) {
                     if (charIdx < len) {
                         grid[row][col] = cleanText[charIdx++];
@@ -279,10 +306,19 @@
         }
 
         function transformText(text, algo, shift, isDecrypt) {
+            if (!text) return '';
+
+            // 1. Sandi Vigenere (Polialfabetik)
+            if (algo === 'vigenere') {
+                return runVigenere(text, shift, isDecrypt);
+            }
+
+            // 2. Transposisi Vertikal
             if (algo === 'transposisi') {
                 return isDecrypt ? transposisiDecrypt(text, shift) : transposisiEncrypt(text, shift);
             }
 
+            // 3. Metode Tunggal (ROT13, Atbash, Caesar)
             let hasil = '';
             for (let i = 0; i < text.length; i++) {
                 if (algo === 'atbash') {
@@ -312,12 +348,18 @@
             const shiftBox = document.getElementById('shiftBox');
             const shiftInput = document.getElementById('shiftValue');
 
-            if (selectedAlgo === 'caesar') {
+            if (selectedAlgo === 'vigenere') {
                 shiftBox.style.display = 'block';
-                shiftInput.placeholder = 'Jumlah Geseran (k)';
+                shiftInput.placeholder = 'Kata Kunci Teks (misal: ROF)';
+                if (!isNaN(shiftInput.value)) shiftInput.value = 'ROF';
+            } else if (selectedAlgo === 'caesar') {
+                shiftBox.style.display = 'block';
+                shiftInput.placeholder = 'Jumlah Geseran Caesar (k)';
+                if (isNaN(shiftInput.value)) shiftInput.value = '6';
             } else if (selectedAlgo === 'transposisi') {
                 shiftBox.style.display = 'block';
                 shiftInput.placeholder = 'Jumlah Kolom/Kunci (k)';
+                if (isNaN(shiftInput.value)) shiftInput.value = '4';
             } else {
                 shiftBox.style.display = 'none';
             }
@@ -325,8 +367,8 @@
             prosesProspek();
         });
 
+        document.getElementById('inputText').addEventListener('input', prosesProspek);
         document.getElementById('shiftValue').addEventListener('input', prosesProspek);
-
         document.getElementById('btnProses').addEventListener('click', prosesProspek);
 
         document.getElementById('btnTukar').addEventListener('click', function() {
